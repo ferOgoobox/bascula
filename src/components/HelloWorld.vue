@@ -1,58 +1,67 @@
+<script setup >
+  import { ref } from 'vue'
+
+  const peso = ref(null)
+  const port = ref(null)
+
+  /* eslint-disable */
+
+  const pesar = async() => {
+    const writer = port.value.writable.getWriter();
+    const data = new Uint8Array([80]);
+    await writer.write(data);
+    writer.releaseLock();
+  }
+
+  const conectar = async() => {
+
+    const filters = [{ usbVendorId: 0x0483, usbProductId: 0x5740 }];
+    port.value = await navigator.serial.requestPort({ filters });
+    await port.value.open({baudRate: 9600});
+
+    pesar();
+
+    const textDecoder = new TextDecoderStream();
+    const readableStreamClosed = port.value.readable.pipeTo(textDecoder.writable);
+
+    while (textDecoder.readable){
+      const reader = textDecoder.readable.getReader();
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          console.log(await reader.read())
+          if (done) {
+            break;
+          }else{
+            console.log('value: ', value)
+            peso.value = value
+
+          }
+
+        }
+      } catch (error) {
+        console.log('error')
+      } finally {
+        console.log('finally')
+        reader.releaseLock();
+      }
+    }
+    await textDecoder.close()
+  }
+
+  /* eslint-enable */
+
+</script>
+
 <template>
-  <div class="hello">
-    <h1>{{ msg }}</h1>
-    <p>
-      For a guide and recipes on how to configure / customize this project,<br>
-      check out the
-      <a href="https://cli.vuejs.org" target="_blank" rel="noopener">vue-cli documentation</a>.
-    </p>
-    <h3>Installed CLI Plugins</h3>
-    <ul>
-      <li><a href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-babel" target="_blank" rel="noopener">babel</a></li>
-      <li><a href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-eslint" target="_blank" rel="noopener">eslint</a></li>
-    </ul>
-    <h3>Essential Links</h3>
-    <ul>
-      <li><a href="https://vuejs.org" target="_blank" rel="noopener">Core Docs</a></li>
-      <li><a href="https://forum.vuejs.org" target="_blank" rel="noopener">Forum</a></li>
-      <li><a href="https://chat.vuejs.org" target="_blank" rel="noopener">Community Chat</a></li>
-      <li><a href="https://twitter.com/vuejs" target="_blank" rel="noopener">Twitter</a></li>
-      <li><a href="https://news.vuejs.org" target="_blank" rel="noopener">News</a></li>
-    </ul>
-    <h3>Ecosystem</h3>
-    <ul>
-      <li><a href="https://router.vuejs.org" target="_blank" rel="noopener">vue-router</a></li>
-      <li><a href="https://vuex.vuejs.org" target="_blank" rel="noopener">vuex</a></li>
-      <li><a href="https://github.com/vuejs/vue-devtools#vue-devtools" target="_blank" rel="noopener">vue-devtools</a></li>
-      <li><a href="https://vue-loader.vuejs.org" target="_blank" rel="noopener">vue-loader</a></li>
-      <li><a href="https://github.com/vuejs/awesome-vue" target="_blank" rel="noopener">awesome-vue</a></li>
-    </ul>
+  <div>
+    <h1>Bascula</h1>
+    <button v-if="!port" @click="conectar()">Conectar</button>
+    <!-- <button @click="pesar()">Peso</button> -->
+    <button @click="pesar()">Enviar dato</button>
+    <h2 v-if="peso">Peso: {{ peso }}</h2>
   </div>
 </template>
 
-<script>
-export default {
-  name: 'HelloWorld',
-  props: {
-    msg: String
-  }
-}
-</script>
-
-<!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
-h3 {
-  margin: 40px 0 0;
-}
-ul {
-  list-style-type: none;
-  padding: 0;
-}
-li {
-  display: inline-block;
-  margin: 0 10px;
-}
-a {
-  color: #42b983;
-}
 </style>
